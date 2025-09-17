@@ -1,0 +1,24 @@
+# Archivos y Carpetas del Entorno Virtual de Python
+.venv/
+venv/
+env/
+
+# Archivos compilados y de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Paquetes y distribución
+*.egg-info
+dist/
+build/
+
+# IDEs (Como VS Code o PyCharm)
+.idea/
+.vscode/
+
+# Configuraciones y credenciales (¡MUY IMPORTANTE!)
+# Si usas un archivo para guardar contraseñas o claves API
+.env
+*.key
+*.pem
