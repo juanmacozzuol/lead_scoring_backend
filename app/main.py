@@ -1,10 +1,14 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session   
 from sqlalchemy import text          
-from app.database import get_db      
+from app.database import get_db
+from app.routes import email
 
-# 1. Instancia de la aplicación FastAPI
+
+# 1. Instancia de la aplicación FastAPI 
 app = FastAPI()
+app.include_router(email.router, prefix="/email", tags=["Email"])
+
 
 # 2. Definición de una ruta (endpoint) usando un decorador
 @app.get("/")
@@ -26,3 +30,6 @@ def ping_db(db: Session = Depends(get_db)):
         return {"db_status": "ok"}
     except Exception as e:
         return {"db_status": "error", "detail": str(e)}
+    
+
+    
