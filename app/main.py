@@ -1,17 +1,13 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session   
 from sqlalchemy import text          
-from app.database import get_db
-from app.routes import email
+from .database.database import get_db      
+from routers import routes
 
 
 # 1. Instancia de la aplicación FastAPI 
 app = FastAPI()
-app.include_router(email.router, prefix="/email", tags=["Email"])
-
-
-# 2. Definición de una ruta (endpoint) usando un decorador
-@app.get("/")
+app.include_router(routes.router)
 def read_root():
     # 3. La función de ruta devuelve el dato que se convertirá a JSON
     return {"Hello": "World"}
