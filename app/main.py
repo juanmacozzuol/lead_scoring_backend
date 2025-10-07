@@ -4,7 +4,8 @@ from sqlalchemy import text
 from .database.database import get_db      
 from routers import routes
 
-# 1. Instancia de la aplicación FastAPI
+
+# 1. Instancia de la aplicación FastAPI 
 app = FastAPI()
 app.include_router(routes.router)
 def read_root():
@@ -25,3 +26,6 @@ def ping_db(db: Session = Depends(get_db)):
         return {"db_status": "ok"}
     except Exception as e:
         return {"db_status": "error", "detail": str(e)}
+    
+
+    
