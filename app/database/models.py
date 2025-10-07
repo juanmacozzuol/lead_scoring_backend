@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Date, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.database.database import Base
 
 
 class Persona(Base):
@@ -9,15 +9,17 @@ class Persona(Base):
     id_persona = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)
     apellido = Column(String(100), nullable=False)
+    fecha_nacimiento = Column(Date, nullable=False)
     genero = Column(String(20))
     dni = Column(String(20), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True)
     fecha_registro = Column(Date)
     contacto = Column(String(50))
     cantidad_hijos = Column(Integer, default=0)
+    estado_civil = Column(String(20), nullable=False, default="Soltero")
     ocupacion = Column(String(50))
-    viviendo_propia = Column(Boolean, default=False)
-    posee_automotor = Column(Boolean, default=False)
+    vivienda_propia = Column(Boolean, default=False)  
+    posee_auto = Column(Boolean, default=False)       
 
     direcciones = relationship("Direccion", back_populates="persona", cascade="all, delete-orphan")
     telefonos = relationship("Telefono", back_populates="persona", cascade="all, delete-orphan")

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session   
 from sqlalchemy import text          
-from .database import get_db      
+from .database.database import get_db      
 from routers import routes
 
 # 1. Instancia de la aplicación FastAPI
