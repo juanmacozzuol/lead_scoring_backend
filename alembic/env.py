@@ -5,8 +5,8 @@ from pathlib import Path
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from app.database import Base
-import app.models
+from app.database.database import Base
+import app.database.models
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -101,8 +101,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
 # Importo Base y engine de tu proyecto
-from app.database import Base, engine
-import app.models  # 👈 Necesario para que Alembic "vea" las tablas
+from app.database.database import Base, engine
+import app.database.models  # 👈 Necesario para que Alembic "vea" las tablas
 
 # Metadata de los modelos
 target_metadata = Base.metadata
