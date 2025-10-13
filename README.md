@@ -1,22 +1,57 @@
 ## Actualización – 18/09/2025
 
-- Se actualizó el archivo `requirements.txt` con las nuevas dependencias. (**SQLAlchemy** y **PyMySQL**.)
+- Se actualizó el archivo `requirements.txt` con las nuevas dependencias.
 
-### Instrucciones 
-1. Hacer `git pull` para traer los cambios más recientes del repo en caso que sea necesario.
-2. Instalar las nuevas dependencias:
-   
-  corer en en terminal el siguiente comando :  pip install -r requirements.txt
+---
 
-## IMPORTANTE ## : 
-- Crear en MySQL una base de datos vacía llamada: lead_scoring
+## Instalación y ejecución local
 
-- Crear archivo .env  (solicitar por whatsapp)
+### 1. Clonar el repositorio
 
-- Levantar el backend con: python -m uvicorn app.main:app --reload
+```bash
+git clone https://github.com/juanmacozzuol/lead_scoring_backend
+cd lead_scoring_backend
+```
 
-- Probar la conexión de la db con : 
-http://127.0.0.1:8000/probandoDB
-Si todo está correcto debería devolver:
+### 2. Crear entorno virtual
 
-{"db_status": "ok"}
+```bash
+python -m venv venv
+
+# En macOS/Linux:
+source venv/bin/activate
+
+# En Windows:
+venv\Scripts\activate
+```
+
+### 3. Instalar dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto y solicitar por whatsapp
+
+### 5. Ejecutar servidor de desarrollo
+
+```bash
+uvicorn app.main:app --reload
+```
+
+El servidor estará disponible en: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+### 6. Verificar que funciona
+
+Abre en tu navegador: [http://127.0.0.1:8000/probandoDB](http://127.0.0.1:8000/probandoDB)
+
+Deberías ver:
+```json
+{
+  "db_status": "ok",
+}
+```
+
+---
