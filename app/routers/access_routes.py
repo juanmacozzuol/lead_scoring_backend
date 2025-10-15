@@ -1,17 +1,18 @@
-from fastapi import APIRouter
+# app/routers/access_routes.py
+
+from fastapi import APIRouter, Form
+from app.controllers.access_controller import login_user, register_user
+
+router = APIRouter(tags=["Access Operations"])
 
 
-# El 'router' es la instancia que contiene todas tus rutas.
-router = APIRouter(
-    tags=["Access Operations"]
-)
+@router.post("/login")
+async def login(username: str = Form(...), password: str = Form(...)):
+    """Login route using username and password."""
+    return login_user(username, password)
 
-@router.get("/login")
-async def login_page():
-    """Ruta de login."""
-    return {"message": "<h1>Página de Login</h1><p>Esta es la página para iniciar sesión.</p>"}
 
-@router.get("/register")
-async def register_page():
-    """Ruta de registro de usuarios."""
-    return {"message": "<h1>Página de Registro</h1><p>Aquí los usuarios pueden registrarse.</p>"}
+@router.post("/register")
+async def register(username: str = Form(...), password: str = Form(...)):
+    """Registration route."""
+    return register_user(username, password)
