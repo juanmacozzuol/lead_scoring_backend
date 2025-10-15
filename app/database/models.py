@@ -131,7 +131,7 @@ class Usuario(Base):
 
     id_usuario = Column(Integer, primary_key=True)
     nombre_usuario = Column(String(50), unique=True, nullable=False)
-    contrasena = Column(String(200), nullable=False)  # encriptada
+    clave = Column(String(200), nullable=False)  
     email = Column(String(100), unique=True)
     rol = Column(String(20))
 
