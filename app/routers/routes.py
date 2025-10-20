@@ -4,6 +4,7 @@ from fastapi import APIRouter
 # y contiene una instancia APIRouter llamada 'router'.
 from .email_routes import router as email_router
 from .access_routes import router as access_router
+from .predict_routes import router as predict_routes 
 # El 'router' es la instancia que contendrá todas tus rutas generales
 router = APIRouter(
     tags=["General"] # Etiqueta para agrupar en la documentación
@@ -14,6 +15,7 @@ router = APIRouter(
 # sean accesibles bajo el prefijo /email.
 router.include_router(email_router, prefix="/email")
 router.include_router(access_router)
+router.include_router(predict_routes, prefix="/predict")
 # -------------------------------------------------------------
 # Rutas Generales
 # -------------------------------------------------------------
