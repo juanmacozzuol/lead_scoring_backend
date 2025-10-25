@@ -24,14 +24,14 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: Session, username: str, password: str) -> Usuario | None:
+def authenticate_user(db: Session, username: str, clave: str) -> Usuario | None:
     """
     Returns the user if authentication is successful, None otherwise.
     """
     user = db.query(Usuario).filter(Usuario.nombre_usuario == username).first()
     if not user:
         return None
-    if not verify_password(password, user.contrasena):
+    if not verify_password(clave, user.clave):
         return None
     return user
 

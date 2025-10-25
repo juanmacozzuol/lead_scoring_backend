@@ -6,9 +6,9 @@ from app.services.access_service import authenticate_user, create_access_token, 
 from app.models import Usuario
 from app.database import get_db
 
-def login_user(username: str, password: str, db: Session = Depends(get_db)):
+def login_user(username: str, clave: str, db: Session = Depends(get_db)):
     """Handles user login flow."""
-    user = authenticate_user(db, username, password)
+    user = authenticate_user(db, username, clave)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -19,14 +19,15 @@ def login_user(username: str, password: str, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-def register_user(username: str, password: str, email: str | None = None, db: Session = Depends(get_db)):
+def register_user(username: str, clave: str, email: str | None = None, db: Session = Depends(get_db)):
     """Handles new user registration."""
     existing_user = db.query(Usuario).filter(Usuario.nombre_usuario == username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
+   
 
-    hashed_password = get_password_hash(password)
-    new_user = Usuario(nombre_usuario=username, contrasena=hashed_password, email=email)
+    hashed_password = get_password_hash(clave)
+    new_user = Usuario(nombre_usuario=username, clave=hashed_password, email=email)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
