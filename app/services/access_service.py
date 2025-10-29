@@ -5,7 +5,7 @@ from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from app.models import Usuario
+from app.models.user_db_models import Usuario
 
 # JWT config
 SECRET_KEY = os.environ.get("SECRET_KEY", "default_secret")  # fallback if env var not set
