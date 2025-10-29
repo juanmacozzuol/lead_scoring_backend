@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Date, Boolean, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database.database import Base
 
@@ -25,8 +25,7 @@ class Persona(Base):
     telefonos = relationship("Telefono", back_populates="persona", cascade="all, delete-orphan")
     polizas = relationship("Poliza", back_populates="persona", cascade="all, delete-orphan")
     scorings = relationship("ScoreEvent", back_populates="persona", cascade="all, delete-orphan")
-    correos = relationship("Correo", back_populates="persona", cascade="all, delete-orphan")
-
+    correos_enviados = relationship("Correo", back_populates="persona")
 
 class Direccion(Base):
     __tablename__ = "direccion"
@@ -64,8 +63,8 @@ class Producto(Base):
     prima_base = Column(Float)
 
     polizas = relationship("Poliza", back_populates="producto")
-    correos = relationship("Correo", back_populates="producto")
-
+    correos_enviados = relationship("Correo", back_populates="producto")
+    favoritos_guardados = relationship("CorreoGuardado", back_populates="producto")
 
 class Poliza(Base):
     __tablename__ = "polizas"
@@ -135,21 +134,42 @@ class Usuario(Base):
     email = Column(String(100), unique=True)
     rol = Column(String(20))
 
-    correos = relationship("Correo", back_populates="usuario")
-
+    correos_enviados = relationship("Correo", back_populates="usuario")
+    favoritos_guardados = relationship("CorreoGuardado", back_populates="usuario")
 
 class Correo(Base):
     __tablename__ = "correo"
 
     id_correo = Column(Integer, primary_key=True)
     asunto = Column(String(200))
-    cuerpo = Column(String(500))
+    cuerpo = Column(Text)
     fecha_creacion = Column(Date)
     fecha_envio = Column(Date)
     id_persona = Column(Integer, ForeignKey("personas.id_persona"))
     id_producto = Column(Integer, ForeignKey("productos.id_producto"))
     id_usuario = Column(Integer, ForeignKey("usuario.id_usuario"))
 
-    persona = relationship("Persona", back_populates="correos")
-    producto = relationship("Producto", back_populates="correos")
-    usuario = relationship("Usuario", back_populates="correos")
+    persona = relationship("Persona", back_populates="correos_enviados")
+    producto = relationship("Producto", back_populates="correos_enviados")
+    usuario = relationship("Usuario", back_populates="correos_enviados")
+
+
+# Plantillas Personales o Favoritos de los empleados
+class CorreoGuardado(Base):
+    __tablename__ = "correo_guardado"
+
+    id_correo_guardado = Column(Integer, primary_key=True)
+
+    nombre = Column(String(100), nullable=False) 
+    asunto = Column(String(200), nullable=False)
+    cuerpo = Column(Text, nullable=False)
+    
+    id_producto = Column(Integer, ForeignKey("productos.id_producto"), nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuario.id_usuario"), nullable=False)
+
+    producto = relationship("Producto", back_populates="favoritos_guardados")
+    usuario = relationship("Usuario", back_populates="favoritos_guardados")
+
+    __table_args__ = (
+        UniqueConstraint('id_usuario', 'id_producto', 'nombre', name='_usuario_producto_nombre_uc'),
+    )

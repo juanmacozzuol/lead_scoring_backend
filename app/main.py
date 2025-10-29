@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session   
 from sqlalchemy import text          
-from .database.database import get_db      
+from .database.database import get_db
 from app.routers import routes
 
 

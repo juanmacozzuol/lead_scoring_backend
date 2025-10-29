@@ -1,68 +1,387 @@
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-from jinja2 import Template
-from datetime import datetime
-from app.models.email_models import EmailLog
+from dotenv import load_dotenv
+import json
+from datetime import datetime, date
+from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
+import brevo_python
+from brevo_python.models.send_smtp_email import SendSmtpEmail
+import re
+import bleach
 
-# Cargar SendGrid API key desde .env
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@bdt.com")
+# Cargar variables desde .env
+load_dotenv()
 
-# Lista simulada para registrar envíos (prototipo)
-email_logs = []
+# Importar modelos de la BD
+from app.database.models import (
+    Persona, 
+    Producto, 
+    Correo, 
+    CorreoGuardado, 
+    Usuario
+)
+# Importar modelos Pydantic
+from app.models.email_models import (
+    GenerarBorradorRequest, 
+    EnviarCorreoRequest,
+    EnviarCorreoResponse,
+    CorreoGuardadoCreate,
+    CorreoGuardadoUpdate
+)
 
-# Generación de borrador
-def generate_email_draft(client_name, age, segment, custom_text=None):
-    # Elegimos estilo según perfil
-    style = "formal" if age > 40 or segment == "corporate" else "informal"
+from app.services import llm_service
+
+# Configuracion del Servicio
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@bdt-seguros.com")
+COMPANY_NAME = os.getenv("COMPANY_NAME", "BDT Seguros")
+
+# Para la limpieza de respuesta LLM
+TAGS_PERMITIDOS = [
+    'p', 'br', 'strong', 'em', 'u', 'b', 'i',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li', 'a', 'span', 'div'
+]
+
+ATRIBUTOS_PERMITIDOS = {
+    'a': ['href', 'title', 'target'],
+    'p': ['style'],
+    'div': ['style'],
+    'span': ['style'],
+    'h1': ['style'], 'h2': ['style'], 'h3': ['style'],
+    'strong': ['style'], 'em': ['style']
+}
+
+
+# Helpers
+
+def _calcular_edad(fecha_nacimiento: date) -> int:
+    """Helper para calcular la edad."""
+    hoy = datetime.utcnow().date()
+    edad = hoy.year - fecha_nacimiento.year - ((hoy.month, hoy.day) < (fecha_nacimiento.month, fecha_nacimiento.day))
+    return edad
+
+# IMPORTANTE:
+# Si el dia de mañana quieren usar otro proveedor (como Mailgun o SendGrid), el unico cambio que se deberia hacer con esta estructura es:
+# Crear una nueva funcion privada en este archivo email_service.py (ej. _enviar_por_mailgun(...)) con la logica necesaria de ese nuevo proveedor.
+# Ir a la funcion enviar_correo_adhoc.
+# Reemplazar la linea _enviar_por_brevo(...) por la nueva _enviar_por_mailgun(...).
+
+def _enviar_por_brevo(to_email: str, subject: str, body_html: str):
+    """Funcion aislada para enviar el email via Brevo."""
     
-    # Template HTML simple
-    html_template = """
-    <html>
-      <body>
-        <img src="https://BDT.com/logo.png" alt="Logo" width="150"/>
-        <p>Hola {{ client_name }},</p>
-        {% if style == 'formal' %}
-        <p>Nos complace informarle acerca de nuestras últimas novedades.</p>
-        {% else %}
-        <p>¡Hola! Tenemos noticias geniales para vos.</p>
-        {% endif %}
-        {% if custom_text %}
-        <p>{{ custom_text }}</p>
-        {% endif %}
-        <p>Saludos,<br/>El equipo de BDT</p>
-      </body>
-    </html>
-    """
-    template = Template(html_template)
-    body_html = template.render(client_name=client_name, style=style, custom_text=custom_text)
-    subject = "Noticias de BDT"
+    # Configuracion el cliente de Brevo
+    configuracion = brevo_python.Configuration()
+    # Lee la API key. Asegurate de agregarla a tu .env
+    configuracion.api_key['api-key'] = BREVO_API_KEY
+    
+    if not configuracion.api_key['api-key']:
+        raise HTTPException(status_code=503, detail="BREVO_API_KEY no esta configurada en el servidor")
 
-    return subject, body_html
-
-# Envío de correo 
-def send_email(to_email, subject, body_html):
-    if not SENDGRID_API_KEY:
-        raise RuntimeError("SENDGRID_API_KEY no configurada")
-
-    message = Mail(
-        from_email=FROM_EMAIL,
-        to_emails=to_email,
+    api_instance = brevo_python.TransactionalEmailsApi(brevo_python.ApiClient(configuracion))
+    
+    # Se crea el objeto del email
+    send_smtp_email = SendSmtpEmail(
+        to=[{"email": to_email}],
+        html_content=body_html,
         subject=subject,
-        html_content=body_html
+        sender={"email": FROM_EMAIL, "name": COMPANY_NAME} # Se debe asegurar que FROM_EMAIL sea un email verificado en Brevo
+    )
+    
+    # Enviar
+    try:
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        print(f"Respuesta de Brevo: {api_response}") # Log para saber que funciono
+    except Exception as e:
+        # Relanzamos la excepcion para que la funcion principal la atrape
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al enviar el correo con Brevo: {str(e)}"
+        )
+
+def _registrar_correo_enviado(db: Session, req: EnviarCorreoRequest, id_usuario: int, exito: bool) -> Correo:
+    """Guarda el resultado del envio en la tabla Correo (auditoria)."""
+    
+    # Usamos .date() para que coincida con el tipo 'Date' de nuestra estructura
+    fecha_actual = datetime.utcnow().date()
+    
+    log_entry = Correo(
+        asunto=req.asunto,
+        cuerpo=req.cuerpo,
+        fecha_creacion=fecha_actual,
+        fecha_envio=fecha_actual if exito else None,
+        id_persona=req.id_persona,
+        id_producto=req.id_producto,
+        id_usuario=id_usuario
+    )
+    db.add(log_entry)
+    db.commit()
+    db.refresh(log_entry)
+    return log_entry
+
+
+# Generacion y envio
+
+def generar_borrador_ia(db: Session, req: GenerarBorradorRequest):
+    """
+    Funcion principal para generar un borrador con el motor LLM.
+    """
+    
+    # Obtenemos datos de la BD
+    persona = db.query(Persona).filter(Persona.id_persona == req.id_persona).first()
+    producto = db.query(Producto).filter(Producto.id_producto == req.id_producto).first()
+    
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+        
+    # Mejormaos datos
+    edad = _calcular_edad(persona.fecha_nacimiento)
+    ciudad = persona.direcciones[0].ciudad if persona.direcciones else "Ciudad desconocida"
+
+    # Construccion del PROMPT
+    prompt = f"""
+        Eres un asistente de ventas experto de la compañía de seguros "{COMPANY_NAME}".
+        Debes redactar un email personalizado para promocionar un producto.
+
+        DATOS DEL CLIENTE:
+        - Nombre: {persona.nombre}
+        - Edad: {edad} años
+        - Ciudad: {ciudad}
+        - Ocupación: {persona.ocupacion or "No especificada"}
+        - Estado Civil: {persona.estado_civil}
+        - Hijos: {persona.cantidad_hijos}
+        - Vivienda Propia: {"Sí" if persona.vivienda_propia else "No"}
+        - Auto: {"Sí" if persona.posee_auto else "No"}
+
+        DATOS DEL PRODUCTO:
+        - Nombre: {producto.nombre}
+        - Tipo: {producto.tipo_producto}
+        - Coberturas: {producto.coberturas_incluidas}
+        - Prima Base: ${producto.prima_base}
+
+        CONTEXTO DE LA RELACIÓN:
+        - Etapa: {req.etapa_relacion}
+        * "prospecto": Primera vez que contactamos al cliente
+        * "cliente_activo": Ya tiene pólizas con nosotros
+        * "cliente_inactivo": Tuvo pólizas pero ya no está activo
+
+        TONO REQUERIDO: {req.formalidad}
+        - "muy_formal": Tratamiento de usted, lenguaje corporativo
+        - "neutral": Equilibrio entre profesional y cercano
+        - "informal": Tratamiento de tú, lenguaje conversacional
+
+        INSTRUCCIONES CRÍTICAS:
+        1. Personaliza según los datos del cliente (edad, ocupación, situación familiar)
+        2. Máximo 3 párrafos
+        3. Incluye un llamado a la acción claro
+        4. NO inventes datos que no te di
+        5. NO uses saludo genérico "Estimado Cliente" - usa su nombre
+        6. Adapta el mensaje a la etapa de relación
+
+        FORMATO DE SALIDA (OBLIGATORIO):
+        Debes devolver ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
+        {{
+        "asunto_sugerido": "texto del asunto",
+        "cuerpo_sugerido": "texto del email en HTML básico"
+        }}
+
+        NO incluyas ningún texto adicional fuera del JSON.
+        NO uses markdown code blocks.
+        El cuerpo_sugerido debe usar HTML básico: <p>, <strong>, <br>, <ul>, <li>
+        """
+
+    
+    # Llamada al motor LLM (Google, OpenAI o Local)
+    try:
+        # Esta funcion decide a que LLM llamar (Google, OpenAI o Local)
+        json_string_response = llm_service.generar_json_email(prompt)
+
+        # Intenta extraer el JSON si viene con texto extra
+        json_match = re.search(r'\{.*\}', json_string_response, re.DOTALL)
+        if json_match:
+            draft_json = json.loads(json_match.group())
+        else:
+        # Parseamos la respuesta JSON del LLM
+            draft_json = json.loads(json_string_response)
+
+        # Validar claves
+        if "asunto_sugerido" not in draft_json or "cuerpo_sugerido" not in draft_json:
+            # En vez de dejar pasar None, devolvemos algo válido con placeholders
+            draft_json = {"asunto_sugerido": "Asunto no generado", "cuerpo_sugerido": "<p>No se pudo generar el cuerpo</p>"}
+
+        return draft_json # Devuelve {"asunto_sugerido": "...", "cuerpo_sugerido": "..."}
+        
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=500, 
+            detail="El LLM devolvio una respuesta invalida (no es JSON).")
+    except Exception as e:
+        # Capturamos errores de la capa LLM (API Keys, timeouts, etc)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error generando borrador: {str(e)}")
+    
+
+def _limpiar_html(html: str) -> str:
+    """Limpia el HTML usando las reglas globales."""
+    return bleach.clean(
+        html, 
+        tags=TAGS_PERMITIDOS, 
+        attributes=ATRIBUTOS_PERMITIDOS, 
+        strip=True
     )
 
+def _limpiar_asunto(asunto: str) -> str:
+    """Elimina TODO el HTML del asunto."""
+    return bleach.clean(asunto, tags=[], strip=True)
+
+
+def enviar_correo_adhoc(db: Session, req: EnviarCorreoRequest, current_user: Usuario) -> EnviarCorreoResponse:
+    """
+    Envia el email de texto libre (editado por el empleado).
+    Esta es ahora la UNICA forma de enviar.
+    """
+    
+    # Validamos que los IDs existan
+    persona = db.query(Persona).filter(Persona.id_persona == req.id_persona).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    if not persona.email:
+        raise HTTPException(status_code=400, detail="La persona no tiene un email registrado")
+    if not db.query(Producto).filter(Producto.id_producto == req.id_producto).first():
+        raise HTTPException(status_code=404, detail="Producto no encontrado (para log)")
+
+    log_entry = None
     try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        # Registrar envío
-        log = EmailLog(client_email=to_email, subject=subject, body_html=body_html,
-                       status="sent", sent_at=datetime.utcnow())
-        email_logs.append(log)
-        return log
+        # Enviamos Email
+        cuerpo_limpio = _limpiar_html(req.cuerpo)
+        asunto_limpio = _limpiar_asunto(req.asunto)        
+        
+        _enviar_por_brevo(
+            to_email=persona.email,
+            subject=asunto_limpio,
+            body_html=cuerpo_limpio
+        )
+
+        
+        # Registramos Auditoria (Exito)
+        log_entry = _registrar_correo_enviado(db, req, current_user.id_usuario, exito=True)
+        
+        return EnviarCorreoResponse(
+            status="enviado", 
+            mensaje=f"Correo enviado exitosamente a {persona.email}",
+            id_correo_log=log_entry.id_correo
+        )
+    
     except Exception as e:
-        log = EmailLog(client_email=to_email, subject=subject, body_html=body_html,
-                       status="failed", error_message=str(e))
-        email_logs.append(log)
-        raise e
+        # Registramos Auditoria (Fallo)
+        # (Solo si el error fue de Brevo, no de validacion)
+        if "Error al enviar" in str(e) or "Error de Brevo" in str(e):
+             log_entry = _registrar_correo_enviado(db, req, current_user.id_usuario, exito=False)
+        
+        # Relanzamos la excepcion
+        if isinstance(e, HTTPException):
+            raise e
+        else:
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+# Gestion de correos guardados
+
+def crear_correo_guardado(db: Session, data: CorreoGuardadoCreate, current_user: Usuario) -> CorreoGuardado:
+    """
+    Guarda un email (asunto/cuerpo) como un "favorito"
+    para el empleado actual.
+    """
+    
+    # Validar que el producto exista
+    if not db.query(Producto).filter(Producto.id_producto == data.id_producto).first():
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    # Validar que no se repita el nombre (usuario + producto + nombre)
+    existente = db.query(CorreoGuardado).filter(
+        CorreoGuardado.id_usuario == current_user.id_usuario,
+        CorreoGuardado.id_producto == data.id_producto,
+        CorreoGuardado.nombre == data.nombre
+    ).first()
+    
+    if existente:
+        raise HTTPException(status_code=400, detail=f"Ya tienes un favorito con el nombre '{data.nombre}' para este producto.")
+
+    # Crear
+    nuevo_favorito = CorreoGuardado(
+        nombre=data.nombre,
+        asunto=data.asunto,
+        cuerpo=data.cuerpo,
+        id_producto=data.id_producto,
+        id_usuario=current_user.id_usuario # Se asigna SIEMPRE al usuario logueado
+    )
+    db.add(nuevo_favorito)
+    db.commit()
+    db.refresh(nuevo_favorito)
+    return nuevo_favorito
+
+def obtener_correos_guardados_por_producto(db: Session, id_producto: int, id_usuario: int):
+    """
+    Devuelve la lista de "favoritos" que un empleado guardo
+    para un producto especifico.
+    """
+    return db.query(CorreoGuardado).filter(
+        CorreoGuardado.id_producto == id_producto,
+        CorreoGuardado.id_usuario == id_usuario
+    ).order_by(CorreoGuardado.nombre).all()
+
+def _obtener_favorito_y_validar_permiso(db: Session, id_correo_guardado: int, id_usuario: int) -> CorreoGuardado:
+    """Helper interno para validar que el favorito pertenece al usuario."""
+    favorito = db.query(CorreoGuardado).filter(
+        CorreoGuardado.id_correo_guardado == id_correo_guardado
+    ).first()
+    
+    if not favorito:
+        raise HTTPException(status_code=404, detail="Correo guardado no encontrado.")
+    
+    if favorito.id_usuario != id_usuario:
+        raise HTTPException(status_code=403, detail="No tienes permiso para modificar este correo guardado.")
+    
+    return favorito
+
+def actualizar_correo_guardado(db: Session, id_correo_guardado: int, data: CorreoGuardadoUpdate, id_usuario: int):
+    """
+    Actualiza un favorito existente.
+    """
+    # Obtenemos el favorito y valida que pertenece al usuario
+    favorito = _obtener_favorito_y_validar_permiso(db, id_correo_guardado, id_usuario)
+    
+    # (Opcional) Validamos duplicados de nombre si el nombre cambia
+    if favorito.nombre != data.nombre:
+        existente = db.query(CorreoGuardado).filter(
+            CorreoGuardado.id_usuario == id_usuario,
+            CorreoGuardado.id_producto == favorito.id_producto,
+            CorreoGuardado.nombre == data.nombre,
+            CorreoGuardado.id_correo_guardado != id_correo_guardado
+        ).first()
+        if existente:
+            raise HTTPException(status_code=400, detail=f"Ya tienes otro favorito con el nombre '{data.nombre}'.")
+
+    # Actualizamos
+    favorito.nombre = data.nombre
+    favorito.asunto = data.asunto
+    favorito.cuerpo = data.cuerpo
+    
+    db.commit()
+    db.refresh(favorito)
+    return favorito
+
+def eliminar_correo_guardado(db: Session, id_correo_guardado: int, id_usuario: int):
+    """
+    Elimina un favorito existente.
+    """
+    # Obtenemos el favorito y valida que pertenece al usuario
+    favorito = _obtener_favorito_y_validar_permiso(db, id_correo_guardado, id_usuario)
+    
+    # Lo elimina
+    db.delete(favorito)
+    db.commit()
+    return {"status": "eliminado", "mensaje": f"Favorito '{favorito.nombre}' eliminado."}

@@ -1,6 +1,6 @@
 from datetime import date
 from app.database.database import SessionLocal, Base, engine
-from app.database.models import Persona, Direccion, Telefono, Producto, Poliza, Pago, Siniestro
+from app.database.models import Persona, Direccion, Telefono, Producto, Poliza, Pago, Siniestro, Usuario
 
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
@@ -40,6 +40,35 @@ personas = [
 ]
 db.add_all(personas)
 db.commit()
+
+# =========================
+# USUARIOS (EMPLEADOS)
+# =========================
+
+usuarios = [
+    Usuario(
+        nombre_usuario="empleado1",
+        clave="password123",
+        email="empleado1@bdt.com",
+        rol="empleado"
+    ),
+    Usuario(
+        nombre_usuario="empleado2",
+        clave="password123",
+        email="empleado2@bdt.com",
+        rol="empleado"
+    ),
+    Usuario(
+        nombre_usuario="admin",
+        clave="admin123",
+        email="admin@bdt.com",
+        rol="admin"
+    ),
+]
+
+db.add_all(usuarios)
+db.commit()
+
 
 # =========================
 # FUNCIONES AUXILIARES
