@@ -10,7 +10,7 @@ from app.repositories.siniestro_repository import obtener_estadisticas_siniestro
 from app.repositories.producto_repository import obtener_tipos_productos_por_persona
 from app.repositories.pago_repository import obtener_cantidad_cuotas_impagas_por_persona
 from app.services.predict_service import predecir_cross_selling
-from app.database.models import ScoreEvent
+from app.models.insurance_db_models import ScoreEvent
 
 
 
