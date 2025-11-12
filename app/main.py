@@ -24,6 +24,7 @@ app.add_middleware(
 
 
 app.include_router(routes.router)
+
 def read_root():
     # 3. La función de ruta devuelve el dato que se convertirá a JSON
     return {"Hello": "World"}
