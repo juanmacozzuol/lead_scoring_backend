@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 from datetime import date
-
 from app.repositories.persona_repository import (
     obtener_persona_por_dni,
     obtener_provincia_por_persona,
@@ -13,8 +12,9 @@ from app.services.predict_service import predecir_cross_selling
 from app.models.insurance_db_models import ScoreEvent
 
 
-
-# funciones auxiliares
+# -------------------------------------------------------
+# Funciones auxiliares
+# -------------------------------------------------------
 
 def calcular_edad(fecha_nacimiento):
     hoy = date.today()
@@ -30,33 +30,35 @@ def calcular_antiguedad(fecha_registro):
     return (hoy.year - fecha_registro.year) * 12 + (hoy.month - fecha_registro.month)
 
 
-# controlador principal
+# -------------------------------------------------------
+# Controlador principal del endpoint /predict/{dni}
+# -------------------------------------------------------
 
 def obtener_prediccion_por_dni(dni: str, db):
     try:
-        # busco la persona en la base de datos
+        # 1️⃣ Busco la persona en la base de datos
         persona = obtener_persona_por_dni(db, dni)
         if not persona:
-            raise HTTPException(status_code=404, detail="no se encontró ninguna persona con ese dni")
+            raise HTTPException(status_code=404, detail="No se encontró ninguna persona con ese DNI")
 
-        # calculo la edad y la antigüedad del cliente
+        # 2️⃣ Calculo edad, antigüedad y provincia
         edad = calcular_edad(persona.fecha_nacimiento)
         antiguedad = calcular_antiguedad(persona.fecha_registro)
         provincia = obtener_provincia_por_persona(db, persona.id_persona) or "buenos aires"
 
-        # traigo la info relacionada del resto de las tablas
+        # 3️⃣ Traigo información de las tablas relacionadas
         poliza_data = obtener_estadisticas_polizas(db, persona.id_persona)
         siniestro_data = obtener_estadisticas_siniestros(db, persona.id_persona)
         productos = obtener_tipos_productos_por_persona(db, persona.id_persona)
         cuotas_impagas = obtener_cantidad_cuotas_impagas_por_persona(db, persona.id_persona)
 
-        # mapeo de productos para saber cuáles ya tiene
+        # 4️⃣ Mapeo de productos (para saber qué tiene activo)
         tiene_auto = int("auto" in productos)
         tiene_hogar = int("hogar" in productos)
         tiene_vida = int("vida" in productos)
         tiene_salud = int("salud" in productos)
 
-        # armo el diccionario con todas las features que va a usar el modelo
+        # 5️⃣ Armo las features que usará el modelo
         features = {
             "edad": edad,
             "genero": persona.genero.lower() if persona.genero else "no especificado",
@@ -81,10 +83,15 @@ def obtener_prediccion_por_dni(dni: str, db):
             "provincia": provincia.lower(),
         }
 
-        # llamo al servicio que corre el modelo y devuelve la predicción
+        # 🟣 Agregamos nombre, apellido y nombre completo
+        features["nombre"] = persona.nombre
+        features["apellido"] = persona.apellido if hasattr(persona, "apellido") else ""
+        features["nombre_completo"] = f"{persona.nombre} {persona.apellido}".strip()
+
+        # 6️⃣ Llamo al servicio que ejecuta el modelo
         resultado = predecir_cross_selling(features)
 
-        # guardo el resultado en la tabla score_event para dejar registro
+        # 7️⃣ Guardo el resultado en la tabla de ScoreEvent
         try:
             nuevo_score = ScoreEvent(
                 puntaje=resultado["score"],
@@ -94,12 +101,12 @@ def obtener_prediccion_por_dni(dni: str, db):
             )
             db.add(nuevo_score)
             db.commit()
-            print(f"✅ score registrado para persona id {persona.id_persona}")
+            print(f"✅ Score registrado para persona id {persona.id_persona}")
         except Exception as e:
             db.rollback()
-            print(f"⚠️ error al guardar el score en la base de datos: {e}")
+            print(f"⚠️ Error al guardar el score en la base de datos: {e}")
 
-        # consulto el último score registrado en la tabla para ese cliente
+        # 8️⃣ Consulto el último score registrado
         ultimo_score = (
             db.query(ScoreEvent)
             .filter(ScoreEvent.id_persona == persona.id_persona)
@@ -108,11 +115,31 @@ def obtener_prediccion_por_dni(dni: str, db):
         )
 
         if not ultimo_score:
-            raise HTTPException(status_code=500, detail="no se pudo registrar el score en la base de datos")
+            raise HTTPException(status_code=500, detail="No se pudo registrar el score en la base de datos")
+        
 
-        # devuelvo el resultado al front con todos los datos relevantes
+                # 🔹 9️⃣ Traigo detalle de pólizas activas para mostrar en el front
+        from sqlalchemy import text
+
+        query_polizas = """
+            SELECT 
+                tipo_seguro,
+                cobertura,
+                suma_asegurada,
+                prima_pagada,
+                estado
+            FROM polizas
+            WHERE id_persona = :id_persona AND estado = 'Activa'
+        """
+        polizas = db.execute(text(query_polizas), {"id_persona": persona.id_persona}).fetchall()
+        features["polizas_detalle"] = [dict(row._mapping) for row in polizas]
+
+
+        # 9️⃣ Devuelvo el resultado completo al front
         return {
             "dni": dni,
+            "nombre": persona.nombre,
+            "apellido": persona.apellido,
             "score": ultimo_score.puntaje,
             "nivel": ultimo_score.nivel_score,
             "productos_recomendados": resultado["productos_recomendados"],
@@ -122,5 +149,5 @@ def obtener_prediccion_por_dni(dni: str, db):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ error general en obtener_prediccion_por_dni: {e}")
-        raise HTTPException(status_code=500, detail=f"error interno: {str(e)}")
+        print(f"❌ Error general en obtener_prediccion_por_dni: {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
