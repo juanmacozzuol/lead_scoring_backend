@@ -14,7 +14,7 @@ router = APIRouter(
 # Incluimos las rutas específicas de email. 
 # Esto hará que todas las rutas de email_router (como /draft y /send) 
 # sean accesibles bajo el prefijo /email.
-router.include_router(email_router, prefix="/email")
+router.include_router(email_router)
 router.include_router(access_router)
 router.include_router(predict_routes, prefix="/predict")
 router.include_router(clientes_router, prefix="/clientes")

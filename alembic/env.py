@@ -1,4 +1,3 @@
-
 import sys
 import os
 from pathlib import Path
@@ -102,7 +101,7 @@ sys.path.append(str(BASE_DIR))
 
 # Importo Base y engine de tu proyecto
 from app.database.database import Base, engine
-#import app.database.models  # 👈 Necesario para que Alembic "vea" las tablas
+# import app.database.models  # 👈 Necesario para que Alembic "vea" las tablas
 
 # Metadata de los modelos
 target_metadata = Base.metadata

@@ -1,7 +1,8 @@
 from datetime import date
 from app.database.database import SessionLocal, Base, engine
-from app.models.user_db_models import Persona, Direccion, Telefono
+from app.models.user_db_models import Persona, Direccion, Telefono, Usuario
 from app.models.insurance_db_models import Producto, Poliza, Pago, Siniestro
+from app.models.email_db_models import Correo
 
 Base.metadata.create_all(bind=engine)
 db = SessionLocal()
@@ -40,6 +41,34 @@ personas = [
             contacto="teléfono", cantidad_hijos=1, ocupacion="Desempleado", vivienda_propia=False, posee_auto=True, estado_civil="Divorciado"),
 ]
 db.add_all(personas)
+db.commit()
+
+# =========================
+# USUARIOS (EMPLEADOS)
+# =========================
+
+usuarios = [
+    Usuario(
+        nombre_usuario="empleado1",
+        clave="password123",
+        email="empleado1@bdt.com",
+        rol="empleado"
+    ),
+    Usuario(
+        nombre_usuario="empleado2",
+        clave="password123",
+        email="empleado2@bdt.com",
+        rol="empleado"
+    ),
+    Usuario(
+        nombre_usuario="admin",
+        clave="admin123",
+        email="admin@bdt.com",
+        rol="admin"
+    ),
+]
+
+db.add_all(usuarios)
 db.commit()
 
 # =========================
