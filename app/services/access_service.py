@@ -24,7 +24,7 @@ ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 # Esquema de seguridad OAuth2 con flujo de contraseña para la documentación de FastAPI
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # Asume que tienes un endpoint /token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
