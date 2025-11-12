@@ -5,7 +5,7 @@ from typing import List
 # Importamos dependencias de la app
 from app.database.database import get_db 
 from app.services.access_service import get_current_user
-from app.database.models import Usuario
+from app.models.user_db_models import Usuario
 
 # Importamos los servicios y repositorios que usaremos
 from app.services import email_service

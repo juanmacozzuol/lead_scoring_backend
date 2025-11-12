@@ -13,7 +13,7 @@ from fastapi.security import OAuth2PasswordBearer
 # Importaciones de la aplicación
 from app.database.database import get_db
 # Asegúrate de que este import sea correcto según tu estructura de modelos
-from app.database.models import Usuario 
+from app.models.user_db_models import Usuario 
 
 
 

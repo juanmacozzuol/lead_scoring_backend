@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List
-from app.database.models import Correo
+from app.models.email_db_models import Correo
 
 def obtener_historial_por_persona(db: Session, id_persona: int) -> List[Correo]:
     """

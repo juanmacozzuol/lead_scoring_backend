@@ -13,13 +13,19 @@ import bleach
 load_dotenv()
 
 # Importar modelos de la BD
-from app.database.models import (
-    Persona, 
-    Producto, 
-    Correo, 
-    CorreoGuardado, 
+from app.models.user_db_models import (
+    Persona,
     Usuario
 )
+from app.models.email_db_models import (
+    Correo
+)
+
+from app.models.insurance_db_models import (
+    Producto
+)
+
+
 # Importar modelos Pydantic
 from app.models.email_models import (
     GenerarBorradorRequest, 
@@ -286,102 +292,3 @@ def enviar_correo_adhoc(db: Session, req: EnviarCorreoRequest, current_user: Usu
             raise e
         else:
             raise HTTPException(status_code=500, detail=str(e))
-
-
-# Gestion de correos guardados
-
-def crear_correo_guardado(db: Session, data: CorreoGuardadoCreate, current_user: Usuario) -> CorreoGuardado:
-    """
-    Guarda un email (asunto/cuerpo) como un "favorito"
-    para el empleado actual.
-    """
-    
-    # Validar que el producto exista
-    if not db.query(Producto).filter(Producto.id_producto == data.id_producto).first():
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-
-    # Validar que no se repita el nombre (usuario + producto + nombre)
-    existente = db.query(CorreoGuardado).filter(
-        CorreoGuardado.id_usuario == current_user.id_usuario,
-        CorreoGuardado.id_producto == data.id_producto,
-        CorreoGuardado.nombre == data.nombre
-    ).first()
-    
-    if existente:
-        raise HTTPException(status_code=400, detail=f"Ya tienes un favorito con el nombre '{data.nombre}' para este producto.")
-
-    # Crear
-    nuevo_favorito = CorreoGuardado(
-        nombre=data.nombre,
-        asunto=data.asunto,
-        cuerpo=data.cuerpo,
-        id_producto=data.id_producto,
-        id_usuario=current_user.id_usuario # Se asigna SIEMPRE al usuario logueado
-    )
-    db.add(nuevo_favorito)
-    db.commit()
-    db.refresh(nuevo_favorito)
-    return nuevo_favorito
-
-def obtener_correos_guardados_por_producto(db: Session, id_producto: int, id_usuario: int):
-    """
-    Devuelve la lista de "favoritos" que un empleado guardo
-    para un producto especifico.
-    """
-    return db.query(CorreoGuardado).filter(
-        CorreoGuardado.id_producto == id_producto,
-        CorreoGuardado.id_usuario == id_usuario
-    ).order_by(CorreoGuardado.nombre).all()
-
-def _obtener_favorito_y_validar_permiso(db: Session, id_correo_guardado: int, id_usuario: int) -> CorreoGuardado:
-    """Helper interno para validar que el favorito pertenece al usuario."""
-    favorito = db.query(CorreoGuardado).filter(
-        CorreoGuardado.id_correo_guardado == id_correo_guardado
-    ).first()
-    
-    if not favorito:
-        raise HTTPException(status_code=404, detail="Correo guardado no encontrado.")
-    
-    if favorito.id_usuario != id_usuario:
-        raise HTTPException(status_code=403, detail="No tienes permiso para modificar este correo guardado.")
-    
-    return favorito
-
-def actualizar_correo_guardado(db: Session, id_correo_guardado: int, data: CorreoGuardadoUpdate, id_usuario: int):
-    """
-    Actualiza un favorito existente.
-    """
-    # Obtenemos el favorito y valida que pertenece al usuario
-    favorito = _obtener_favorito_y_validar_permiso(db, id_correo_guardado, id_usuario)
-    
-    # (Opcional) Validamos duplicados de nombre si el nombre cambia
-    if favorito.nombre != data.nombre:
-        existente = db.query(CorreoGuardado).filter(
-            CorreoGuardado.id_usuario == id_usuario,
-            CorreoGuardado.id_producto == favorito.id_producto,
-            CorreoGuardado.nombre == data.nombre,
-            CorreoGuardado.id_correo_guardado != id_correo_guardado
-        ).first()
-        if existente:
-            raise HTTPException(status_code=400, detail=f"Ya tienes otro favorito con el nombre '{data.nombre}'.")
-
-    # Actualizamos
-    favorito.nombre = data.nombre
-    favorito.asunto = data.asunto
-    favorito.cuerpo = data.cuerpo
-    
-    db.commit()
-    db.refresh(favorito)
-    return favorito
-
-def eliminar_correo_guardado(db: Session, id_correo_guardado: int, id_usuario: int):
-    """
-    Elimina un favorito existente.
-    """
-    # Obtenemos el favorito y valida que pertenece al usuario
-    favorito = _obtener_favorito_y_validar_permiso(db, id_correo_guardado, id_usuario)
-    
-    # Lo elimina
-    db.delete(favorito)
-    db.commit()
-    return {"status": "eliminado", "mensaje": f"Favorito '{favorito.nombre}' eliminado."}
