@@ -1,5 +1,7 @@
 from datetime import date
 from app.database.database import SessionLocal, Base, engine
+from app.models.user_db_models import Persona, Direccion, Telefono
+from app.models.insurance_db_models import Producto, Poliza, Pago, Siniestro
 from app.database.models import Persona, Direccion, Telefono, Producto, Poliza, Pago, Siniestro, Usuario
 
 Base.metadata.create_all(bind=engine)
