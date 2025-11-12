@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from app.database.database import Base
-import app.models import *
+from app.models import *
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -102,7 +102,7 @@ sys.path.append(str(BASE_DIR))
 
 # Importo Base y engine de tu proyecto
 from app.database.database import Base, engine
-import app.database.models  # 👈 Necesario para que Alembic "vea" las tablas
+#import app.database.models  # 👈 Necesario para que Alembic "vea" las tablas
 
 # Metadata de los modelos
 target_metadata = Base.metadata
