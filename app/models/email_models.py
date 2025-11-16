@@ -73,6 +73,7 @@ class CorreoGuardadoResponse(CorreoGuardadoBase):
         from_attributes = True # Para que Pydantic lea el modelo de SQLAlchemy
 
 
+
 # Modelos para el Historial
 class CorreoHistorialResponse(BaseModel):
     """
@@ -86,6 +87,9 @@ class CorreoHistorialResponse(BaseModel):
     id_persona: int
     id_producto: int
     id_usuario: int
+    dni: str
+    mail: str          # email de la persona (destinatario)
+    usuario: str       # nombre del usuario que envió el correo
 
     class Config:
         from_attributes = True # Para que Pydantic lea el modelo de SQLAlchemy
