@@ -67,14 +67,7 @@ def obtener_prediccion_por_dni(dni: str, db):
 
             "antiguedad_cliente": int(antiguedad),
             "cuotas_impagas": int(cuotas_impagas),
-        # 🟣 Agregamos id, nombre, apellido y nombre completo
-        features["id"] = persona.id_persona
-        features["nombre"] = persona.nombre
-        features["apellido"] = persona.apellido if hasattr(persona, "apellido") else ""
-        features["nombre_completo"] = f"{persona.nombre} {persona.apellido}".strip()
-        features["email"] = persona.email
-        # 6️⃣ Llamo al servicio que ejecuta el modelo
-        resultado = predecir_cross_selling(features)
+
 
             "cantidad_polizas": int(poliza_data.cantidad_polizas if poliza_data else 0),
             "costo_mensual_total_seguro": float(poliza_data.costo_mensual_total_seguro if poliza_data else 0),
@@ -93,6 +86,15 @@ def obtener_prediccion_por_dni(dni: str, db):
             "apellido": persona.apellido,
             "nombre_completo": f"{persona.nombre} {persona.apellido}",
         }
+
+        # 🟣 Agregamos id, nombre, apellido y nombre completo
+        features["id"] = persona.id_persona
+        features["nombre"] = persona.nombre
+        features["apellido"] = persona.apellido if hasattr(persona, "apellido") else ""
+        features["nombre_completo"] = f"{persona.nombre} {persona.apellido}".strip()
+        features["email"] = persona.email
+        # 6️⃣ Llamo al servicio que ejecuta el modelo
+        resultado = predecir_cross_selling(features)
 
         # 3) Traer polizas para el modal
         query_polizas = """
