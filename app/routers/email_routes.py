@@ -189,3 +189,30 @@ def obtener_historial_por_persona(
     """
     # Esta logica esta en el repositorio
     return correo_repository.obtener_historial_por_persona(db=db, id_persona=id_persona)
+
+@router.get(
+    "/historial", 
+    response_model=List[CorreoHistorialResponse],
+    summary="Traer todos los correos enviados"
+)
+def obtener_todos_los_correos(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    correos = correo_repository.obtener_todos_los_correos(db=db)
+    resultado = []
+    for c, email, nombre_usuario in correos:
+        resultado.append({
+            "id_correo": c.id_correo,
+            "asunto": c.asunto,
+            "cuerpo": c.cuerpo,
+            "fecha_creacion": c.fecha_creacion,
+            "fecha_envio": c.fecha_envio,
+            "id_persona": c.id_persona,
+            "id_producto": c.id_producto,
+            "id_usuario": c.id_usuario,
+            "dni": c.persona.dni, 
+            "mail": email,
+            "usuario": nombre_usuario
+        })
+    return resultado

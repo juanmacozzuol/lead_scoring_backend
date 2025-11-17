@@ -83,11 +83,12 @@ def obtener_prediccion_por_dni(dni: str, db):
             "provincia": provincia.lower(),
         }
 
-        # 🟣 Agregamos nombre, apellido y nombre completo
+        # 🟣 Agregamos id, nombre, apellido y nombre completo
+        features["id"] = persona.id_persona
         features["nombre"] = persona.nombre
         features["apellido"] = persona.apellido if hasattr(persona, "apellido") else ""
         features["nombre_completo"] = f"{persona.nombre} {persona.apellido}".strip()
-
+        features["email"] = persona.email
         # 6️⃣ Llamo al servicio que ejecuta el modelo
         resultado = predecir_cross_selling(features)
 
