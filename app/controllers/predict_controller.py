@@ -103,8 +103,7 @@ def obtener_prediccion_por_dni(dni: str, db):
         )
 
         if score_existente:
-            print("ℹ️ Score ya existe → NO se recalcula, solo productos recomendados.")
-
+         
            
             resultado = predecir_cross_selling(features)
 
@@ -119,7 +118,7 @@ def obtener_prediccion_por_dni(dni: str, db):
             }
 
        
-        print("🟣 Calculando score por primera vez…")
+        print(" Calculando score ")
         resultado = predecir_cross_selling(features)
 
         nuevo = ScoreEvent(
