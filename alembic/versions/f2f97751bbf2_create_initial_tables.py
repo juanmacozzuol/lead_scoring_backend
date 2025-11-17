@@ -60,7 +60,7 @@ def upgrade() -> None:
     op.create_table('correo',
     sa.Column('id_correo', sa.Integer(), nullable=False),
     sa.Column('asunto', sa.String(length=200), nullable=True),
-    sa.Column('cuerpo', sa.String(length=500), nullable=True),
+    sa.Column('cuerpo', sa.String(length=2048), nullable=True),
     sa.Column('fecha_creacion', sa.Date(), nullable=True),
     sa.Column('fecha_envio', sa.Date(), nullable=True),
     sa.Column('id_persona', sa.Integer(), nullable=True),

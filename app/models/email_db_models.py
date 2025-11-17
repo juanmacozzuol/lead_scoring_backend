@@ -13,7 +13,7 @@ class Correo(Base):
 
     id_correo = Column(Integer, primary_key=True)
     asunto = Column(String(200))
-    cuerpo = Column(String(500))
+    cuerpo = Column(String(2048))
     fecha_creacion = Column(Date)
     fecha_envio = Column(Date)
     id_persona = Column(Integer, ForeignKey("personas.id_persona"))
