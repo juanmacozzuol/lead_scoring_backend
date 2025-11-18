@@ -104,8 +104,11 @@ def obtener_prediccion_por_dni(dni: str, db):
         """
         polizas = db.execute(text(query_polizas), {"id_persona": persona.id_persona}).fetchall()
         features["polizas_detalle"] = [dict(row._mapping) for row in polizas]
-
         
+        productos = db.execute(text("SELECT * FROM productos")).fetchall()
+        mapa_ids = {p[2]: p[0] for p in productos}
+
+ 
         score_existente = (
             db.query(ScoreEvent)
             .filter(ScoreEvent.id_persona == persona.id_persona)
@@ -116,7 +119,10 @@ def obtener_prediccion_por_dni(dni: str, db):
          
            
             resultado = predecir_cross_selling(features)
-
+            resultado["productos_recomendados"] = [
+                {"id": mapa_ids.get(prod), "valor": prod}
+                for prod in resultado["productos_recomendados"]
+            ]
             return {
                 "dni": dni,
                 "nombre": persona.nombre,
@@ -130,6 +136,10 @@ def obtener_prediccion_por_dni(dni: str, db):
        
         print(" Calculando score ")
         resultado = predecir_cross_selling(features)
+        resultado["productos_recomendados"] = [
+            {"id": mapa_ids.get(prod), "valor": prod}
+            for prod in resultado["productos_recomendados"]
+        ]
 
         nuevo = ScoreEvent(
             puntaje=resultado["score"],
