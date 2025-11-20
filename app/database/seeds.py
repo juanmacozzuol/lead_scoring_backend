@@ -12,25 +12,25 @@ db = SessionLocal()
 # =========================
 vida = Producto(
     nombre="Seguro de Vida",
-    tipo_producto="vida",
+    tipo_producto="Vida",
     coberturas_incluidas="Muerte, Invalidez",
     prima_base=150000
 )
 auto = Producto(
     nombre="Seguro de Auto",
-    tipo_producto="auto",
+    tipo_producto="Auto",
     coberturas_incluidas="Responsabilidad Civil, Robo, Daños",
     prima_base=120000
 )
 hogar = Producto(
     nombre="Seguro de Hogar",
-    tipo_producto="hogar",
+    tipo_producto="Hogar",
     coberturas_incluidas="Incendio, Robo, Daños",
     prima_base=180000
 )
 salud = Producto(
     nombre="Seguro de Salud",
-    tipo_producto="salud",
+    tipo_producto="Salud",
     coberturas_incluidas="Cobertura médica completa",
     prima_base=100000
 )
