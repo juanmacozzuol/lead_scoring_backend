@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
+from pydantic import BaseModel, field_validator
+from typing import Optional, Any
 from datetime import date
 
 # Modelos para Generacion y Envio de Correos
@@ -87,9 +87,18 @@ class CorreoHistorialResponse(BaseModel):
     id_persona: int
     id_producto: int
     id_usuario: int
-    dni: str
-    mail: str          # email de la persona (destinatario)
-    usuario: str       # nombre del usuario que envió el correo
+    dni: Optional[str] = None
+    mail: Optional[str] = None          # email de la persona (destinatario)
+    usuario: Optional[Any] = None       # nombre del usuario que envió el correo
 
     class Config:
         from_attributes = True # Para que Pydantic lea el modelo de SQLAlchemy
+
+    # Validador para usuario
+    @field_validator('usuario', mode='before')
+    def parse_usuario(cls, v):
+        # Si 'v' es un objeto (no es nulo ni string), intentamos sacar el username
+        if v and not isinstance(v, str):
+            # Intenta obtener .username, si no tiene, devuelve str(v) como fallback
+            return getattr(v, 'username', str(v))
+        return v
