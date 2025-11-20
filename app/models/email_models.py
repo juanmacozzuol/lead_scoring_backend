@@ -97,8 +97,12 @@ class CorreoHistorialResponse(BaseModel):
     # Validador para usuario
     @field_validator('usuario', mode='before')
     def parse_usuario(cls, v):
-        # Si 'v' es un objeto (no es nulo ni string), intentamos sacar el username
-        if v and not isinstance(v, str):
-            # Intenta obtener .username, si no tiene, devuelve str(v) como fallback
-            return getattr(v, 'username', str(v))
-        return v
+        if isinstance(v, str) or v is None:
+            return v
+            
+        for attr in ['username', 'nombre', 'email', 'nombre_usuario']:
+            valor = getattr(v, attr, None)
+            if valor:
+                return str(valor)
+        
+        return "Agente"
