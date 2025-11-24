@@ -20,6 +20,8 @@ except Exception as e:
 # Cliente de Google (se configura una vez)
 try:
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    # Para modificar el modelo de GEMINI a usar se recomienda primero correr el test de versiones
+    # Asi se sabra cuales se encuentran disponibles en base a su API Key
     google_model = genai.GenerativeModel("models/gemini-2.5-flash")
 except Exception as e:
     print(f"Advertencia: No se pudo configurar Google AI (API Key?): {e}")

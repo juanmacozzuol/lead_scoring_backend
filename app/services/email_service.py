@@ -179,12 +179,15 @@ def generar_borrador_ia(db: Session, req: GenerarBorradorRequest):
         - "informal": Tratamiento de tú, lenguaje conversacional
 
         INSTRUCCIONES CRÍTICAS:
-        1. Personaliza según los datos del cliente (edad, ocupación, situación familiar)
-        2. Máximo 3 párrafos
-        3. Incluye un llamado a la acción claro
-        4. NO inventes datos que no te di
-        5. NO uses saludo genérico "Estimado Cliente" - usa su nombre
-        6. Adapta el mensaje a la etapa de relación
+        1. USA los datos para inferir necesidades, pero NO los menciones explícitamente como datos crudos. 
+           (Ejemplo: Si tiene hijos, habla de "proteger el futuro de tu familia", NO digas "como tienes 2 hijos").
+           (Ejemplo: Si tiene 50 años, habla de "tranquilidad y respaldo", NO digas "a tus 50 años").
+        2. Máximo 3 párrafos.
+        3. Incluye un llamado a la acción claro.
+        4. NO inventes datos que no te di.
+        5. NO uses saludo genérico "Estimado Cliente" - usa su nombre.
+        6. Adapta el mensaje a la etapa de relación.
+        7. PROHIBIDO mencionar la edad exacta, estado civil o cantidad numérica de hijos en el texto. Úsalos solo para deducir el "pain point" (punto de dolor) del cliente.
 
         FORMATO DE SALIDA (OBLIGATORIO):
         Debes devolver ÚNICAMENTE un objeto JSON válido con esta estructura exacta:
