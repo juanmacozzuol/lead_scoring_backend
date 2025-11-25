@@ -42,7 +42,7 @@ db.commit()
 # PERSONAS (5 ALTOS, 5 MEDIOS, 5 BAJOS)
 # =========================
 personas = [
-    # ===== ALTOS =====
+    # ===== A =====
     Persona(
         nombre="Mariana",
         apellido="Sosa",
@@ -59,12 +59,12 @@ personas = [
         estado_civil="Casado"
     ),
     Persona(
-        nombre="Hernán",
-        apellido="Lopez",
+        nombre="Nicolas",
+        apellido="Rennis",
         genero="Masculino",
         dni="28777888",
-        # mail pedido para probar score alto
-        email="angy9817.am@gmail.com",
+        
+        email="nrennis@bdtglobal.com",
         fecha_nacimiento=date(1978, 8, 21),
         fecha_registro=date(2015, 2, 5),
         contacto="teléfono",
@@ -100,7 +100,7 @@ personas = [
         contacto="correo",
         cantidad_hijos=1,
         ocupacion="Empresario",
-        vivienda_propia=True,
+        vivienda_propia=True,  
         posee_auto=True,
         estado_civil="Casado"
     ),
@@ -120,7 +120,7 @@ personas = [
         estado_civil="Soltero"
     ),
 
-    # ===== MEDIOS =====
+    # ===== M=====
     Persona(
         nombre="Camila",
         apellido="Torres",
@@ -197,7 +197,7 @@ personas = [
         estado_civil="Casado"
     ),
 
-    # ===== BAJOS =====
+    # ===== B=====
     Persona(
         nombre="Lucía",
         apellido="Fernandez",
