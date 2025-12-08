@@ -79,7 +79,7 @@ async def create_producto(producto_data: ProductoCreate, db: Session = Depends(g
     """
     try:
         # Validar tipo de producto
-        tipos_validos = ['Auto', 'Hogar', 'Vida', 'Salud']
+        tipos_validos = ['Auto', 'Hogar', 'Vida', 'Salud', "auto", "hogar", "salud", "vida"]
         if producto_data.tipo_producto not in tipos_validos:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -141,7 +141,7 @@ async def update_producto(
             producto.nombre = producto_data.nombre
         
         if producto_data.tipo_producto is not None:
-            tipos_validos = ['Auto', 'Hogar', 'Vida', 'Salud']
+            tipos_validos = ['Auto', 'Hogar', 'Vida', 'Salud', "auto", "hogar", "salud", "vida"]
             if producto_data.tipo_producto not in tipos_validos:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
