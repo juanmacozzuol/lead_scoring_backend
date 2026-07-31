@@ -1,22 +1,36 @@
-## Actualización – 18/09/2025
+# Lead Scoring Backend
 
-- Se actualizó el archivo `requirements.txt` con las nuevas dependencias. (**SQLAlchemy** y **PyMySQL**.)
+Backend API for a lead scoring system, built with FastAPI and MySQL. This is my final capstone project for a Systems Analyst degree, developed together with a teammate who built the frontend: [lead_scoring_frontend](https://github.com/Beraldocamila/lead_scoring_frontend).
 
-### Instrucciones 
-1. Hacer `git pull` para traer los cambios más recientes del repo en caso que sea necesario.
-2. Instalar las nuevas dependencias:
-   
-  corer en en terminal el siguiente comando :  pip install -r requirements.txt
+## Stack
 
-## IMPORTANTE ## : 
-- Crear en MySQL una base de datos vacía llamada: lead_scoring
+- **FastAPI**
+- **SQLAlchemy** + **Alembic** (migrations)
+- **MySQL** (via PyMySQL)
 
-- Crear archivo .env  (solicitar por whatsapp)
+## Running it locally
 
-- Levantar el backend con: python -m uvicorn app.main:app --reload
+1. Create an empty MySQL database named `lead_scoring`.
+2. Create a `.env` file in the root with your database connection string:
 
-- Probar la conexión de la db con : 
-http://127.0.0.1:8000/probandoDB
-Si todo está correcto debería devolver:
+   ```
+   DATABASE_URL=mysql+pymysql://user:password@host:port/lead_scoring
+   ```
 
-{"db_status": "ok"}
+3. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Start the server:
+
+   ```bash
+   python -m uvicorn app.main:app --reload
+   ```
+
+5. Check the database connection at `http://127.0.0.1:8000/probandoDB` — a healthy response looks like:
+
+   ```json
+   {"db_status": "ok"}
+   ```
